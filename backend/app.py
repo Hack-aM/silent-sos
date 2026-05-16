@@ -196,13 +196,14 @@ def create_app():
     return app
 
 
+# Instantiate the app globally so Gunicorn can easily import it
+app = create_app()
+
 # ─────────────────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app = create_app()
-
     # debug=True: auto-reloads on code changes (development only!)
     # host="0.0.0.0": accessible from any network interface
-    # In production, use Gunicorn: gunicorn -w 4 "app:create_app()"
+    # In production, use Gunicorn: gunicorn --chdir backend app:app
     app.run(debug=True, host="0.0.0.0", port=5000)

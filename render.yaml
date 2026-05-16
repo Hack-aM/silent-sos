@@ -17,12 +17,6 @@ services:
           property: connectionString
       - key: CORS_ORIGINS
         value: "https://silent-sos-system.onrender.com"
-      - key: TWILIO_ACCOUNT_SID
-        value: ""
-      - key: TWILIO_AUTH_TOKEN
-        value: ""
-      - key: TWILIO_FROM_NUMBER
-        value: ""
 
 databases:
   - name: silent-sos-db

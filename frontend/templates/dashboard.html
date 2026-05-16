@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Silent SOS Safety System</title>
+  <meta name="description" content="Your personal AI-powered emergency safety dashboard. One tap SOS protection." />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <!-- Leaflet.js — Free open-source map. No API key needed. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body class="dashboard-page" id="appBody">
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CALCULATOR STEALTH MODE OVERLAY                        -->
+  <!-- Shows instead of real app if stealth mode is active    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="calculatorOverlay" class="calc-overlay" style="display:none;">
+    <div class="calc-container">
+      <div class="calc-display">
+        <div class="calc-expr" id="calcExpr"></div>
+        <div class="calc-result" id="calcResult">0</div>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-op" onclick="calcInput('C')">C</button>
+        <button class="calc-btn calc-op" onclick="calcInput('+/-')">+/-</button>
+        <button class="calc-btn calc-op" onclick="calcInput('%')">%</button>
+        <button class="calc-btn calc-op calc-op-right" onclick="calcInput('÷')">÷</button>
+
+        <button class="calc-btn" onclick="calcInput('7')">7</button>
+        <button class="calc-btn" onclick="calcInput('8')">8</button>
+        <button class="calc-btn" onclick="calcInput('9')">9</button>
+        <button class="calc-btn calc-op calc-op-right" onclick="calcInput('×')">×</button>
+
+        <button class="calc-btn" onclick="calcInput('4')">4</button>
+        <button class="calc-btn" onclick="calcInput('5')">5</button>
+        <button class="calc-btn" onclick="calcInput('6')">6</button>
+        <button class="calc-btn calc-op calc-op-right" onclick="calcInput('-')">−</button>
+
+        <button class="calc-btn" onclick="calcInput('1')">1</button>
+        <button class="calc-btn" onclick="calcInput('2')">2</button>
+        <button class="calc-btn" onclick="calcInput('3')">3</button>
+        <button class="calc-btn calc-op calc-op-right" onclick="calcInput('+')">+</button>
+
+        <button class="calc-btn calc-zero" onclick="calcInput('0')">0</button>
+        <button class="calc-btn" onclick="calcInput('.')">.</button>
+        <button class="calc-btn calc-op calc-op-right" onclick="calcInput('=')"><b>=</b></button>
+      </div>
+      <div class="calc-hint">Enter secret PIN to unlock</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- FAKE CALL OVERLAY                                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="fakeCallOverlay" class="fake-call-overlay" style="display:none;">
+    <div class="fake-call-screen">
+      <div class="fake-call-avatar">👩</div>
+      <div class="fake-caller-name" id="fakeCallerName">Mom Calling…</div>
+      <div class="fake-call-status" id="fakeCallStatus">incoming call</div>
+
+      <div class="fake-call-actions">
+        <button class="fake-call-btn fake-decline" onclick="endFakeCall()">
+          <span>📵</span>
+          <small>Decline</small>
+        </button>
+        <button class="fake-call-btn fake-accept" onclick="acceptFakeCall()">
+          <span>📞</span>
+          <small>Accept</small>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- NIGHT MODE OVERLAY EFFECT                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="nightModeBar" class="night-mode-bar" style="display:none;">
+    🌙 Night Safety Mode Active
+    <button onclick="toggleNightMode()" style="margin-left:8px; background:none; border:1px solid rgba(255,255,255,0.3); color:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:0.75rem;">Disable</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TOP NAVIGATION BAR                                     -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <nav class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon" style="width:36px;height:36px;font-size:1.1rem;">🛡️</div>
+      <span class="brand-name">Silent SOS</span>
+    </div>
+    <div class="topbar-actions">
+      <!-- Night mode toggle -->
+      <button class="topbar-icon-btn" id="nightModeBtn" onclick="toggleNightMode()" title="Night Safety Mode">🌙</button>
+      <!-- Calculator/stealth mode -->
+      <button class="topbar-icon-btn" onclick="enableCalculatorMode()" title="Stealth Mode">🔢</button>
+    </div>
+    <div class="topbar-user">
+      <div class="user-avatar" id="userAvatar">P</div>
+      <span id="userName">Loading…</span>
+      <button class="topbar-logout" id="logoutBtn" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- MAIN DASHBOARD                                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <main class="dashboard-main">
+
+    <!-- ── 1. WELCOME BANNER ─────────────────────────────── -->
+    <section class="welcome-banner">
+      <div class="welcome-text">
+        <h1>Hello, <span id="welcomeName">there</span> 👋</h1>
+        <p>Your AI safety system is active and watching over you.</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          System Online
+        </div>
+        <div class="status-badge" id="safeJourneyBadge" style="display:none; background:rgba(255,159,10,0.12); border-color:rgba(255,159,10,0.3); color:var(--clr-warning);">
+          <span class="status-dot" style="background:var(--clr-warning);"></span>
+          Safe Journey Active
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 2. STATS ROW ───────────────────────────────────── -->
+    <div class="card-grid stats-grid">
+      <div class="card stat-card">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-label">Total Alerts</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="statContacts" style="color:var(--clr-purple);">—</div>
+        <div class="stat-label">Contacts Saved</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-value" id="statHighRisk" style="color:var(--clr-sos);">—</div>
+        <div class="stat-label">High Risk Events</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon">🤖</div>
+        <div class="stat-value" id="statAIScore" style="color:var(--clr-warning);">—</div>
+        <div class="stat-label">Latest AI Score</div>
+      </div>
+    </div>
+
+    <!-- ── 3. SOS BUTTON SECTION ─────────────────────────── -->
+    <section class="card sos-card">
+      <div class="section-header">
+        <span class="section-title">🆘 Emergency SOS</span>
+        <span id="sosSubtitle" class="sos-subtitle">Press to trigger emergency alert</span>
+      </div>
+
+      <div class="sos-section">
+        <!-- Pulsing rings + SOS button -->
+        <div class="sos-ring-wrapper">
+          <div class="sos-ring"></div>
+          <div class="sos-ring"></div>
+          <div class="sos-ring"></div>
+          <button class="sos-btn" id="sosBtn" onclick="triggerSOS()"
+            aria-label="Activate Emergency SOS" title="Hold 2s or tap to activate">
+            <span class="sos-btn-icon">🆘</span>
+            <span class="sos-btn-label">SOS</span>
+          </button>
+        </div>
+
+        <!-- Trigger hints -->
+        <div class="trigger-hints">
+          <span class="trigger-chip">📳 Shake 3×</span>
+          <span class="trigger-chip">🔑 Secret PIN</span>
+          <span class="trigger-chip">⏱️ Hold 2s</span>
+          <span class="trigger-chip">🔊 Voice: "Help"</span>
+        </div>
+
+        <!-- Step-by-step status -->
+        <div class="sos-status" id="sosStatus">
+          <div class="status-step" id="step1"><span class="step-icon">📍</span><span>Capturing GPS Location…</span></div>
+          <div class="status-step" id="step2"><span class="step-icon">📡</span><span>Sending Alert to Server…</span></div>
+          <div class="status-step" id="step3"><span class="step-icon">🎙️</span><span>Recording Audio Evidence…</span></div>
+          <div class="status-step" id="step4"><span class="step-icon">🤖</span><span>Running AI Danger Analysis…</span></div>
+          <div class="status-step" id="step5"><span class="step-icon">✅</span><span>Emergency Contacts Notified</span></div>
+        </div>
+
+        <!-- AI Result Card -->
+        <div id="aiResultCard" class="ai-result-card" style="display:none;">
+          <div class="ai-result-header">
+            <span>🤖 AI Danger Analysis</span>
+            <span class="alert-risk" id="riskChip">—</span>
+          </div>
+          <div class="score-gauge">
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" id="scoreBarFill" style="width:0%"></div>
+            </div>
+            <span class="score-value" id="scoreValue">0</span><small>/100</small>
+          </div>
+          <div id="detectedWords" class="detected-words"></div>
+          <div id="aiTranscript" class="ai-transcript"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 3b. LIVE TRACKING MAP ──────────────────────────── -->
+    <section class="card live-track-card" id="liveTrackSection">
+      <div class="section-header">
+        <span class="section-title">
+          <span class="lt-title-icon">📡</span> Live Tracking
+        </span>
+        <div class="lt-header-right">
+          <span class="lt-badge" id="ltBadge">
+            <span class="lt-badge-dot"></span>
+            <span id="ltBadgeText">Standby</span>
+          </span>
+          <button class="btn btn-ghost lt-toggle-btn" id="ltToggleBtn" onclick="toggleLiveTracking()">
+            Start Tracking
+          </button>
+        </div>
+      </div>
+
+      <!-- Map container -->
+      <div class="lt-map-wrapper">
+        <div id="liveTrackMap" class="lt-map"></div>
+        <!-- Animated pulse overlay when tracking is active -->
+        <div class="lt-pulse-overlay" id="ltPulseOverlay" style="display:none;">
+          <div class="lt-pulse-ring"></div>
+          <div class="lt-pulse-ring lt-ring-2"></div>
+          <div class="lt-pulse-center">📍</div>
+        </div>
+      </div>
+
+      <!-- Tracking info bar -->
+      <div class="lt-info-bar" id="ltInfoBar" style="display:none;">
+        <div class="lt-info-item">
+          <span class="lt-info-label">Coordinates</span>
+          <span class="lt-info-value" id="ltCoords">—</span>
+        </div>
+        <div class="lt-info-item">
+          <span class="lt-info-label">Speed</span>
+          <span class="lt-info-value" id="ltSpeed">—</span>
+        </div>
+        <div class="lt-info-item">
+          <span class="lt-info-label">Updates</span>
+          <span class="lt-info-value" id="ltUpdates">0</span>
+        </div>
+        <div class="lt-info-item">
+          <span class="lt-info-label">Duration</span>
+          <span class="lt-info-value" id="ltDuration">00:00</span>
+        </div>
+      </div>
+
+      <!-- Route log -->
+      <div class="lt-route-log" id="ltRouteLog" style="display:none;">
+        <div class="lt-route-header">🛤️ Route Log</div>
+        <div class="lt-route-entries" id="ltRouteEntries"></div>
+      </div>
+    </section>
+
+    <!-- ── 4. QUICK ACTIONS ROW ───────────────────────────── -->
+    <div class="quick-actions">
+      <button class="quick-action-btn" id="fakeCallBtn" onclick="startFakeCall()">
+        <span class="qa-icon">📞</span>
+        <span class="qa-label">Fake Call</span>
+      </button>
+      <button class="quick-action-btn" id="safeJourneyBtn" onclick="toggleSafeJourney()">
+        <span class="qa-icon">🛤️</span>
+        <span class="qa-label">Safe Journey</span>
+      </button>
+      <button class="quick-action-btn" onclick="reportUnsafeArea()">
+        <span class="qa-icon">⚠️</span>
+        <span class="qa-label">Report Area</span>
+      </button>
+      <button class="quick-action-btn" onclick="doSafeCheckIn()">
+        <span class="qa-icon">✅</span>
+        <span class="qa-label">I'm Safe</span>
+      </button>
+    </div>
+
+    <!-- ── 5. FAKE CALL SETUP PANEL ──────────────────────── -->
+    <section class="card" id="fakeCallSetup" style="display:none;">
+      <div class="section-header">
+        <span class="section-title">📞 Fake Call Setup</span>
+        <button class="btn btn-ghost" style="font-size:0.8rem; padding:0.3rem 0.7rem;"
+          onclick="document.getElementById('fakeCallSetup').style.display='none'">✕</button>
+      </div>
+      <div class="fake-call-setup-grid">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Caller Name</label>
+          <input id="fakeCallerInput" type="text" class="form-input" placeholder="Mom" value="Mom" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Delay (seconds)</label>
+          <input id="fakeCallDelay" type="number" class="form-input" placeholder="5" value="5" min="0" max="60" />
+        </div>
+        <button class="btn btn-primary" onclick="scheduleFakeCall()" style="width:100%;">
+          📱 Schedule Fake Call
+        </button>
+      </div>
+    </section>
+
+    <!-- ── 6. SAFE JOURNEY PANEL ─────────────────────────── -->
+    <section class="card" id="safeJourneyPanel" style="display:none;">
+      <div class="section-header">
+        <span class="section-title">🛤️ Safe Journey Mode</span>
+      </div>
+      <div class="safe-journey-content">
+        <div class="form-group">
+          <label class="form-label">Destination</label>
+          <input id="journeyDest" type="text" class="form-input" placeholder="Home / Office / etc." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estimated Travel Time (minutes)</label>
+          <input id="journeyTime" type="number" class="form-input" placeholder="30" min="1" max="480" value="30" />
+        </div>
+        <div id="journeyStatus" class="journey-status"></div>
+        <button id="journeyStartBtn" class="btn btn-primary" onclick="startSafeJourney()">
+          🚀 Start Safe Journey
+        </button>
+      </div>
+    </section>
+
+    <!-- ── 7. CONTACTS + RECENT ALERTS ───────────────────── -->
+    <div class="card-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+
+      <!-- Emergency Contacts -->
+      <div class="card contacts-section">
+        <div class="section-header">
+          <span class="section-title">👥 Emergency Contacts</span>
+          <button class="btn btn-ghost" style="padding:0.35rem 0.8rem; font-size:0.8rem;"
+            onclick="toggleContactForm()">+ Add</button>
+        </div>
+
+        <div id="contactFormWrapper" style="display:none; margin-bottom:var(--space-md);">
+          <div class="contact-form">
+            <div class="form-group" style="margin:0;">
+              <input id="cName" type="text" class="form-input" placeholder="Contact Name" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <input id="cPhone" type="tel" class="form-input" placeholder="+91 9876543210" />
+            </div>
+            <div class="form-group" style="margin:0; grid-column: 1/-1;">
+              <input id="cRelation" type="text" class="form-input" placeholder="Relation (e.g. Mother, Sister, Friend)" />
+            </div>
+            <div style="display:flex; gap: var(--space-sm); grid-column: 1/-1;">
+              <button class="btn btn-primary" style="flex:1;" onclick="addContact()">Save Contact</button>
+              <button class="btn btn-ghost" style="flex:0 0 auto;" onclick="toggleContactForm()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-list" id="contactList">
+          <div class="empty-state">No contacts added yet.<br/>Add trusted people above.</div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts -->
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">🚨 Recent Alerts</span>
+          <button class="btn btn-ghost" style="font-size:0.78rem; padding:0.3rem 0.7rem;"
+            onclick="loadAlerts()">Refresh</button>
+        </div>
+        <div class="alert-history" id="alertHistory">
+          <div class="empty-state">No alerts triggered yet.<br/>Stay safe!</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 8. LIVE ALERT MAP ──────────────────────────────── -->
+    <section class="card">
+      <div class="section-header">
+        <span class="section-title">🗺️ Alert Location Map</span>
+        <span style="color:var(--clr-text-muted); font-size:0.82rem;">Past SOS GPS locations</span>
+      </div>
+      <div id="alertMap" class="map-container"></div>
+      <p id="mapEmptyMsg" class="map-empty-msg" style="display:none;">
+        No GPS data yet. Trigger an SOS with location enabled to see pins here.
+      </p>
+    </section>
+
+    <!-- ── 9. EVIDENCE VAULT ─────────────────────────────── -->
+    <section class="card">
+      <div class="section-header">
+        <span class="section-title">🔒 Evidence Vault</span>
+        <span style="color:var(--clr-text-muted); font-size:0.82rem;">Secure audio recordings</span>
+      </div>
+      <div id="evidenceVault" class="evidence-list">
+        <div class="empty-state">No recordings stored yet.<br/>Audio evidence is collected automatically during SOS.</div>
+      </div>
+    </section>
+
+    <!-- ── 10. ABOUT / TIPS ──────────────────────────────── -->
+    <section class="card tips-card">
+      <div class="section-title" style="margin-bottom:var(--space-md);">💡 Safety Tips</div>
+      <div class="tips-grid">
+        <div class="tip-item"><span class="tip-icon">🔒</span><div><strong>Stealth Mode</strong><br/><small>Tap 🔢 in the top bar to hide the app as a calculator</small></div></div>
+        <div class="tip-item"><span class="tip-icon">📳</span><div><strong>Shake SOS</strong><br/><small>Shake your phone 3 times to silently trigger SOS</small></div></div>
+        <div class="tip-item"><span class="tip-icon">📞</span><div><strong>Fake Call</strong><br/><small>Tap "Fake Call" to get a realistic incoming call and escape danger</small></div></div>
+        <div class="tip-item"><span class="tip-icon">🛤️</span><div><strong>Safe Journey</strong><br/><small>Activate before traveling alone — auto-alerts if you don't arrive</small></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Leaflet.js map library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Main dashboard logic -->
+  <script src="/static/js/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Environment secrets — NEVER commit
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# SQLite database (local dev only)
+*.db
+*.sqlite3
+
+# Audio uploads (user data — not for git)
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up — Silent SOS Women Safety System</title>
+  <meta name="description" content="Create your free Silent SOS account — AI-powered women safety emergency system." />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+
+    <!-- Brand Logo -->
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <span class="brand-name">Silent SOS</span>
+    </div>
+
+    <h1 class="auth-title">Create Your Shield</h1>
+    <p class="auth-subtitle">Free forever · Your safety, your control</p>
+
+    <!-- Alert Message Box -->
+    <div id="alertMsg" class="alert-msg" role="alert"></div>
+
+    <!-- Signup Form -->
+    <form id="signupForm" novalidate>
+
+      <div class="form-group">
+        <label class="form-label" for="full_name">Full Name</label>
+        <input
+          id="full_name"
+          type="text"
+          class="form-input"
+          placeholder="Priya Sharma"
+          autocomplete="name"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input
+          id="email"
+          type="email"
+          class="form-input"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="phone_number">Phone Number <span style="color:var(--clr-text-subtle)">(optional)</span></label>
+        <input
+          id="phone_number"
+          type="tel"
+          class="form-input"
+          placeholder="+91 9876543210"
+          autocomplete="tel"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          class="form-input"
+          placeholder="Min 8 chars, 1 uppercase, 1 number"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+
+      <!-- Password strength bar -->
+      <div class="pw-strength-bar" id="pwStrengthBar" style="display:none;">
+        <div class="pw-strength-fill" id="pwStrengthFill"></div>
+      </div>
+      <div id="pwStrengthLabel" style="font-size:0.75rem; color:var(--clr-text-muted); margin-bottom:var(--space-md); display:none;"></div>
+
+      <div style="margin-top: var(--space-lg);">
+        <button id="signupBtn" type="submit" class="btn btn-primary">
+          <span id="signupBtnText">Create Free Account →</span>
+        </button>
+      </div>
+
+    </form>
+
+    <p class="auth-footer">
+      Already have an account?
+      <a href="/login">Sign in →</a>
+    </p>
+
+  </div>
+
+  <script>
+    /**
+     * signup.html — Registration Page JavaScript
+     * -------------------------------------------
+     * Handles form submission with real-time password strength
+     * indicator and redirects to login on success.
+     */
+
+    const form     = document.getElementById('signupForm');
+    const alertBox = document.getElementById('alertMsg');
+    const btn      = document.getElementById('signupBtn');
+    const btnText  = document.getElementById('signupBtnText');
+    const pwInput  = document.getElementById('password');
+
+    // ── Password strength indicator ────────────────────────
+    pwInput.addEventListener('input', () => {
+      const val = pwInput.value;
+      const bar  = document.getElementById('pwStrengthBar');
+      const fill = document.getElementById('pwStrengthFill');
+      const lbl  = document.getElementById('pwStrengthLabel');
+
+      if (!val) { bar.style.display = 'none'; lbl.style.display = 'none'; return; }
+
+      bar.style.display = 'block';
+      lbl.style.display = 'block';
+
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+
+      const levels = [
+        { pct: 25, color: '#ff2d55', text: 'Weak' },
+        { pct: 50, color: '#ff9f0a', text: 'Fair' },
+        { pct: 75, color: '#30d158', text: 'Good' },
+        { pct: 100, color: '#30d158', text: 'Strong 💪' }
+      ];
+      const lvl = levels[score - 1] || levels[0];
+      fill.style.width = `${lvl.pct}%`;
+      fill.style.background = lvl.color;
+      lbl.textContent = `Password strength: ${lvl.text}`;
+      lbl.style.color = lvl.color;
+    });
+
+    function showAlert(msg, type = 'error') {
+      alertBox.textContent = msg;
+      alertBox.className = `alert-msg show ${type}`;
+    }
+
+    function setLoading(loading) {
+      btn.disabled = loading;
+      btnText.innerHTML = loading
+        ? '<span class="spinner"></span> Creating account…'
+        : 'Create Free Account →';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const full_name    = document.getElementById('full_name').value.trim();
+      const email        = document.getElementById('email').value.trim();
+      const phone_number = document.getElementById('phone_number').value.trim();
+      const password     = document.getElementById('password').value;
+
+      if (!full_name || !email || !password) {
+        showAlert('Please fill in all required fields.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ full_name, email, phone_number, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert('Account created! Redirecting to login…', 'success');
+          setTimeout(() => { window.location.href = '/login'; }, 1200);
+        } else {
+          showAlert(data.error || 'Registration failed. Please try again.');
+          setLoading(false);
+        }
+
+      } catch (err) {
+        showAlert('Network error. Please check your connection.');
+        setLoading(false);
+      }
+    });
+  </script>
+
+</body>
+</html>

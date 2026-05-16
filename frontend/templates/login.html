@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Silent SOS Women Safety System</title>
+  <meta name="description" content="Sign in to Silent SOS — your personal women safety emergency system." />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+
+    <!-- Brand Logo -->
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <span class="brand-name">Silent SOS</span>
+    </div>
+
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-subtitle">Sign in to your safety dashboard</p>
+
+    <!-- Alert Message Box -->
+    <div id="alertMsg" class="alert-msg" role="alert"></div>
+
+    <!-- Login Form -->
+    <form id="loginForm" novalidate>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input
+          id="email"
+          type="email"
+          class="form-input"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          class="form-input"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <div style="margin-top: var(--space-lg);">
+        <button id="loginBtn" type="submit" class="btn btn-primary">
+          <span id="loginBtnText">Sign In</span>
+        </button>
+      </div>
+
+    </form>
+
+    <p class="auth-footer">
+      Don't have an account?
+      <a href="/signup">Create one free →</a>
+    </p>
+
+  </div>
+
+  <script>
+    /**
+     * login.html — Login Page JavaScript
+     * ------------------------------------
+     * Handles form submission, sends credentials to the Flask API,
+     * and redirects to the dashboard on success.
+     */
+
+    const form     = document.getElementById('loginForm');
+    const alertBox = document.getElementById('alertMsg');
+    const loginBtn = document.getElementById('loginBtn');
+    const btnText  = document.getElementById('loginBtnText');
+
+    // If the user is already logged in, send them to dashboard
+    checkExistingSession();
+
+    async function checkExistingSession() {
+      try {
+        const res = await fetch('/api/me', { credentials: 'include' });
+        if (res.ok) window.location.href = '/dashboard';
+      } catch (_) { /* not logged in, stay on page */ }
+    }
+
+    function showAlert(msg, type = 'error') {
+      alertBox.textContent = msg;
+      alertBox.className = `alert-msg show ${type}`;
+    }
+
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      btnText.innerHTML = loading
+        ? '<span class="spinner"></span> Signing in…'
+        : 'Sign In';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      // Basic client-side validation
+      if (!email || !password) {
+        showAlert('Please enter your email and password.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        // POST credentials to Flask backend
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',            // include session cookie
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert('Login successful! Redirecting…', 'success');
+          // Redirect to dashboard after a brief pause
+          setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+        } else {
+          showAlert(data.error || 'Login failed. Please try again.');
+          setLoading(false);
+        }
+
+      } catch (err) {
+        showAlert('Network error. Please check your connection.');
+        setLoading(false);
+      }
+    });
+  </script>
+
+</body>
+</html>

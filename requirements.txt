@@ -10,4 +10,4 @@ scipy==1.13.0
 pydub==0.25.1
 gunicorn==22.0.0
 twilio==9.2.2
-
+psycopg2-binary>=2.9.9

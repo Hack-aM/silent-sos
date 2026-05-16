@@ -33,6 +33,7 @@ import logging
 from flask import Flask, send_from_directory, send_file, session
 from flask_cors import CORS
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load environment variables from .env file
 # WHY: Keeps secrets like SECRET_KEY out of source code
@@ -71,6 +72,10 @@ def create_app():
         static_folder=STATIC_DIR
     )
 
+    # Enable ProxyFix for Render deployment (behind load balancer)
+    if os.getenv("FLASK_ENV") == "production":
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     # ── App Configuration ─────────────────────────────────
     # SECRET_KEY: Signs session cookies and CSRF tokens.
     # NEVER hardcode this in production — use environment variable.
@@ -79,10 +84,17 @@ def create_app():
         "fallback-dev-key-do-not-use-in-production"
     )
 
-    # Database URI — uses SQLite for development
-    # Change to postgresql://user:pass@host/db for production
+    # Database URI Configuration
+    # Uses DATABASE_URL from .env or system environment.
+    # Fallback to local SQLite if not provided.
     db_path = os.path.join(BASE_DIR, "silent_sos.db")
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    db_url = os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
+    
+    # SQLAlchemy 1.4+ requires 'postgresql://' instead of 'postgres://'
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
     # Disable modification tracking to save memory
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -97,8 +109,10 @@ def create_app():
     # Session cookie security settings
     app.config["SESSION_COOKIE_HTTPONLY"] = True   # JS cannot read cookie
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # Prevent CSRF
-    # Set to True only when using HTTPS in production:
-    # app.config["SESSION_COOKIE_SECURE"] = True
+    
+    # Enable secure cookies in production (requires HTTPS)
+    if os.getenv("FLASK_ENV") == "production":
+        app.config["SESSION_COOKIE_SECURE"] = True
 
     # ── Setup Logging ─────────────────────────────────────
     logging.basicConfig(

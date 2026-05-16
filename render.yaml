@@ -2,16 +2,31 @@ services:
   - type: web
     name: silent-sos-system
     env: python
-    region: singapore          # closest to India
+    region: singapore
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn --chdir backend 'app:create_app()' --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
     envVars:
+      - key: FLASK_ENV
+        value: production
       - key: SECRET_KEY
-        generateValue: true     # Render auto-generates a secure key
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: silent-sos-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: "https://silent-sos-system.onrender.com"
       - key: TWILIO_ACCOUNT_SID
-        value: ""               # Fill in Render dashboard
+        value: ""
       - key: TWILIO_AUTH_TOKEN
-        value: ""               # Fill in Render dashboard
+        value: ""
       - key: TWILIO_FROM_NUMBER
-        value: ""               # Fill in Render dashboard
+        value: ""
+
+databases:
+  - name: silent-sos-db
+    databaseName: silentsos
+    user: silentsos_user
+    plan: free
+    region: singapore
